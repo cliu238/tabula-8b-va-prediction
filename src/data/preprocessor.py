@@ -132,10 +132,14 @@ class PHMRCPreprocessor:
         # For symptoms: Convert various missing representations to 'not_assessed'
         missing_values = ['', 'NA', 'N/A', 'Unknown', "Don't Know", 'DK', -99, -999]
         
-        for col in df.columns:
-            if col.startswith('a') or col in ['fever', 'cough', 'difficulty_breathing']:
-                df[col] = df[col].replace(missing_values, 'not_assessed')
-                df[col] = df[col].fillna('not_assessed')
+        # Suppress FutureWarning for replace
+        import warnings
+        with warnings.catch_warnings():
+            warnings.filterwarnings('ignore', category=FutureWarning)
+            for col in df.columns:
+                if col.startswith('a') or col in ['fever', 'cough', 'difficulty_breathing']:
+                    df[col] = df[col].replace(missing_values, 'not_assessed')
+                    df[col] = df[col].fillna('not_assessed')
         
         return df
     
@@ -164,13 +168,19 @@ class PHMRCPreprocessor:
     
     def _process_demographics(self, df: pd.DataFrame) -> pd.DataFrame:
         """Process demographic variables."""
+        # Make a copy to avoid fragmentation warning
+        df = df.copy()
+        
         # Process age into single field
         if 'age_years' in df.columns:
-            df['age'] = df['age_years'].fillna(0)
+            # Convert to numeric, handling any string values
+            df['age'] = pd.to_numeric(df['age_years'], errors='coerce').fillna(0)
             if 'age_months' in df.columns:
-                df['age'] += df['age_months'].fillna(0) / 12
+                age_months = pd.to_numeric(df['age_months'], errors='coerce').fillna(0)
+                df['age'] += age_months / 12
             if 'age_days' in df.columns:
-                df['age'] += df['age_days'].fillna(0) / 365
+                age_days = pd.to_numeric(df['age_days'], errors='coerce').fillna(0)
+                df['age'] += age_days / 365
             
             # Drop individual age columns
             df = df.drop(columns=['age_years', 'age_months', 'age_days'], errors='ignore')
