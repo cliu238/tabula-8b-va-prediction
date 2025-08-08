@@ -127,7 +127,7 @@ def check_gpu():
     return True
 
 
-def download_model(model_name="mlfoundations/tabula-8b-v1.2"):
+def download_model(model_name="mlfoundations/tabula-8b"):
     """Download the Tabula-8B model from Hugging Face."""
     print("\n" + "="*60)
     print("Downloading Tabula-8B model...")

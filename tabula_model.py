@@ -30,7 +30,7 @@ class TabulaConfig(BaseModel):
     """Configuration for Tabula-8B model."""
     
     model_name: str = Field(
-        default="mlfoundations/tabula-8b-v1.2",
+        default="mlfoundations/tabula-8b",
         description="Hugging Face model identifier"
     )
     device: str = Field(
@@ -38,7 +38,7 @@ class TabulaConfig(BaseModel):
         description="Device to use: 'cuda', 'cpu', or 'auto'"
     )
     use_8bit: bool = Field(
-        default=False,
+        default=True,  # Recommended for M3 Max with 48GB RAM
         description="Use 8-bit quantization for reduced memory"
     )
     use_4bit: bool = Field(
