@@ -1,5 +1,7 @@
 # Tabula-8B for Verbal Autopsy Cause of Death Prediction
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/cliu238/tabula-8b-va-prediction/blob/main/colab_notebook.ipynb)
+
 Zero-shot cause of death prediction from PHMRC verbal autopsy data using the Tabula-8B foundation model.
 
 ## 🎯 Project Overview
