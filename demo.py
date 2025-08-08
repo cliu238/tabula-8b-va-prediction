@@ -18,7 +18,7 @@ warnings.filterwarnings('ignore')
 sys.path.insert(0, str(Path(__file__).parent))
 
 from src.data.preprocessor import PHMRCPreprocessor
-from src.data.serializer import VADataSerializer
+from src.data.tabula_formatter import TabulaVAFormatter
 
 
 def check_model_available():
@@ -78,8 +78,8 @@ def load_model():
         return None
 
 
-def run_predictions(model, serialized_texts: List[str], processed_df: pd.DataFrame, batch_size: int = 4) -> List[Dict]:
-    """Run predictions on serialized texts using direct generation."""
+def run_predictions(model, processed_df: pd.DataFrame, formatter: TabulaVAFormatter, batch_size: int = 4) -> List[Dict]:
+    """Run predictions using CSV format for Tabula-8B."""
     from tqdm import tqdm
     import torch
     
@@ -89,17 +89,23 @@ def run_predictions(model, serialized_texts: List[str], processed_df: pd.DataFra
     print("Running Predictions")
     print("="*60)
     
-    for i in tqdm(range(0, len(serialized_texts), batch_size), desc="Processing batches"):
-        batch = serialized_texts[i:i+batch_size]
+    for i in tqdm(range(0, len(processed_df), batch_size), desc="Processing batches"):
+        batch_df = processed_df.iloc[i:i+batch_size]
         
-        for j, text in enumerate(batch):
+        for idx, row in batch_df.iterrows():
             try:
-                # Create prompt for cause of death prediction
+                # Create CSV format for single prediction
+                row_df = pd.DataFrame([row])
+                row_df = row_df.drop(columns=['cause_of_death', 'cause_of_death_code'], errors='ignore')
+                
+                # Format as CSV for Tabula-8B
                 prompt = (
-                    "Based on the following patient information and symptoms, "
-                    "predict the most likely cause of death. Respond with only the cause name.\n\n"
-                    f"Patient information: {text}\n\n"
-                    "Most likely cause of death:"
+                    "Task: Predict cause of death from verbal autopsy data.\n\n"
+                    "Data (CSV format):\n"
+                    f"{row_df.to_csv(index=False)}\n"
+                    "Predict the cause of death. Common causes include: "
+                    "TB, AIDS/HIV, Malaria, Cardiovascular disease, Respiratory infections.\n\n"
+                    "Cause of death:"
                 )
                 
                 # Tokenize the prompt
@@ -136,16 +142,20 @@ def run_predictions(model, serialized_texts: List[str], processed_df: pd.DataFra
                 if ':' in cause:
                     cause = cause.split(':')[-1].strip()
                 
+                # Get a preview of the CSV data
+                csv_preview = row_df.to_csv(index=False)
+                csv_preview = csv_preview[:100] + "..." if len(csv_preview) > 100 else csv_preview
+                
                 predictions.append({
-                    'input': text[:100] + "..." if len(text) > 100 else text,
+                    'input': csv_preview,
                     'prediction': cause if cause else 'Unknown',
                     'confidence': 0.85  # Placeholder confidence
                 })
                 
             except Exception as e:
-                print(f"\nError processing record {i+j}: {str(e)[:100]}")
+                print(f"\nError processing record {i}: {str(e)[:100]}")
                 predictions.append({
-                    'input': text[:100] + "..." if len(text) > 100 else text,
+                    'input': 'Error loading data',
                     'prediction': 'Error',
                     'confidence': 0.0
                 })
@@ -253,18 +263,15 @@ def run_demo(sample_size: int = 10, model_only: bool = False):
     
     if model_only:
         # Load pre-processed data if running model-only
-        serialized_path = Path("data/processed") / f"demo_serialized_{sample_size}.txt"
-        if not serialized_path.exists():
+        processed_path = Path("data/processed") / f"demo_sample_{sample_size}.csv"
+        if not processed_path.exists():
             print(f"❌ No preprocessed data found. Run without --model-only first.")
             return
         
-        with open(serialized_path, 'r') as f:
-            serialized_texts = [line.strip() for line in f.readlines()]
-        
-        processed_path = Path("data/processed") / f"demo_sample_{sample_size}.csv"
-        processed_df = pd.read_csv(processed_path) if processed_path.exists() else None
+        processed_df = pd.read_csv(processed_path)
+        formatter = TabulaVAFormatter()
     
-    predictions = run_predictions(model, serialized_texts, processed_df, batch_size=2)
+    predictions = run_predictions(model, processed_df, formatter, batch_size=2)
     
     # Display results
     print("\n" + "="*60)

@@ -33,19 +33,30 @@ class PHMRCPreprocessor:
             # Gold standard metadata
             'gs_comorbid1', 'gs_comorbid2', 'gs_level',
             
+            # Birth and death dates (keep age but not raw dates)
+            'g1_01d', 'g1_01m', 'g1_01y',  # Birth dates
+            'g1_06d', 'g1_06m', 'g1_06y',  # Death dates
+            
             # Interview administrative data (dates and process info)
             'g2_01', 'g2_02', 'g2_03ad', 'g2_03am', 'g2_03ay',
             'g2_03bd', 'g2_03bm', 'g2_03by', 'g2_03cd', 'g2_03cm', 'g2_03cy',
             'g2_03dd', 'g2_03dm', 'g2_03dy', 'g2_03ed', 'g2_03em', 'g2_03ey',
             'g2_03fd', 'g2_03fm', 'g2_03fy',
             
-            # Respondent information (not about deceased)
-            'g3_01',  # Respondent relationship
-            'g4_02', 'g4_03a', 'g4_03b', 'g4_04', 'g4_05', 'g4_06', 'g4_07', 'g4_08',
+            # Additional g2 interview metadata
+            'g2_04', 'g2_05', 'g2_06', 'g2_07', 'g2_08', 'g2_09',
             
-            # Interview process metadata
+            # Respondent information (not about deceased)
+            'g3_01', 'g3_02', 'g3_03', 'g3_04', 'g3_05',
+            
+            # Interview location and process
+            'g4_01', 'g4_02', 'g4_03a', 'g4_03b', 'g4_04', 'g4_05', 
+            'g4_06', 'g4_07', 'g4_08', 'g4_09', 'g4_10',
+            
+            # Interview completion metadata
             'g5_01d', 'g5_01m', 'g5_01y', 'g5_02', 'g5_03d', 'g5_03m', 'g5_03y',
-            'g5_04a', 'g5_04b', 'g5_04c', 'g5_05', 'g5_06a', 'g5_06b', 'g5_07', 'g5_08'
+            'g5_04a', 'g5_04b', 'g5_04c', 'g5_05', 'g5_06a', 'g5_06b', 'g5_07', 'g5_08',
+            'g5_09', 'g5_10', 'g5_11', 'g5_12'
         ]
     
     def _create_column_mapping(self) -> Dict[str, str]:
@@ -60,7 +71,9 @@ class PHMRCPreprocessor:
             'g1_09': 'education_level',
             'g1_10': 'language',
             
-            # Common symptoms (examples - extend as needed)
+            # Common symptoms - keeping original column names for consistency
+            # Note: We'll keep most symptom columns with their original names
+            # to preserve the data structure Tabula-8B expects
             'a1_01_1': 'fever',
             'a1_01_2': 'cough',
             'a1_01_3': 'difficulty_breathing',
@@ -75,6 +88,16 @@ class PHMRCPreprocessor:
             'a1_01_12': 'weight_loss',
             'a1_01_13': 'night_sweats',
             'a1_01_14': 'loss_of_consciousness',
+            
+            # Additional important symptoms
+            'a2_03': 'fever_continuous',
+            'a2_04': 'fever_night_sweats',
+            'a2_05': 'cough_productive',
+            'a2_06': 'cough_blood',
+            'a2_07': 'breathlessness',
+            'a2_08': 'chest_pain_sudden',
+            'a2_09': 'diarrhea_blood',
+            'a2_10': 'diarrhea_persistent',
             
             # Duration and onset
             'a2_01': 'illness_duration_days',
@@ -145,15 +168,18 @@ class PHMRCPreprocessor:
     
     def _convert_symptoms(self, df: pd.DataFrame) -> pd.DataFrame:
         """Convert symptom columns to descriptive values."""
+        # Keep original format for Tabula-8B compatibility
         symptom_mapping = {
-            1: 'yes',
-            0: 'no',
-            '1': 'yes',
-            '0': 'no',
-            'Yes': 'yes',
-            'No': 'no',
-            'Y': 'yes',
-            'N': 'no'
+            1: 'Yes',
+            0: 'No',
+            '1': 'Yes',
+            '0': 'No',
+            'yes': 'Yes',
+            'no': 'No',
+            'Y': 'Yes',
+            'N': 'No',
+            'y': 'Yes',
+            'n': 'No'
         }
         
         symptom_cols = [col for col in df.columns if 
